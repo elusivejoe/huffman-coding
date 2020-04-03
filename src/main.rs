@@ -15,6 +15,49 @@ struct Node {
     right: Option<Box<Node>>,
 }
 
+#[derive(Copy, Clone)]
+struct HuffmanCode {
+    code: u8,
+    length: u8,
+}
+
+impl HuffmanCode {
+    fn new() -> HuffmanCode {
+        HuffmanCode { code: 0, length: 0 }
+    }
+
+    fn push_bit(&mut self, set: bool) {
+        assert!(self.length < 8, "Attempted to push more than 8 bits.");
+
+        self.code <<= 1;
+
+        if set {
+            self.code |= 0b00000001;
+        }
+
+        self.length += 1;
+    }
+
+    fn pop_bit(&mut self) -> bool {
+        assert!(self.length > 0, "Attempted to extract -1 bit.");
+
+        let popped = (self.code & 0b00000001) == 1;
+
+        self.code >>= 1;
+        self.length -= 1;
+
+        popped
+    }
+
+    fn code(&self) -> u8 {
+        self.code
+    }
+
+    fn bits_count(&self) -> u8 {
+        self.length
+    }
+}
+
 //note: reversed order
 impl std::cmp::Ord for Node {
     fn cmp(&self, other: &Self) -> Ordering {
@@ -66,35 +109,44 @@ fn collect_bottom_leaves<T: Read + Seek>(reader: &mut T) -> std::io::Result<Bina
     Ok(result)
 }
 
-fn walk_tree(node: &Box<Node>, codes: &mut HashMap<u8, String>, current_code: &mut String) {
+fn walk_tree(
+    node: &Box<Node>,
+    codes: &mut HashMap<u8, HuffmanCode>,
+    current_code: &mut HuffmanCode,
+) {
     if let Some(byte) = node.byte {
-        codes.insert(byte, current_code.clone());
+        codes.insert(byte, *current_code);
         return;
     }
 
     if let Some(left) = &node.left {
-        current_code.push('0');
+        current_code.push_bit(false);
         walk_tree(left, codes, current_code);
-        current_code.pop();
+        current_code.pop_bit();
     }
 
     if let Some(right) = &node.right {
-        current_code.push('1');
+        current_code.push_bit(true);
         walk_tree(right, codes, current_code);
-        current_code.pop();
+        current_code.pop_bit();
     }
 }
 
 fn calc_codes(root_node: &Box<Node>) {
-    let mut codes = HashMap::<u8, String>::new();
-    let mut current_code = String::new();
+    let mut codes = HashMap::<u8, HuffmanCode>::new();
+    let mut current_code = HuffmanCode::new();
 
     walk_tree(root_node, &mut codes, &mut current_code);
 
     for entry in &codes {
         match codes.get(entry.0) {
             Some(code) => {
-                println!("{}: {}", *entry.0 as char, code);
+                println!(
+                    "{}: <{}>{:b}",
+                    *entry.0 as char,
+                    code.bits_count(),
+                    code.code()
+                );
             }
             None => panic!("Broken tree."),
         }
@@ -140,4 +192,80 @@ fn main() -> std::io::Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::HuffmanCode;
+
+    #[test]
+    fn test_huff_code_operations() {
+        let mut huff_code = HuffmanCode::new();
+
+        huff_code.push_bit(true);
+        assert_eq!(huff_code.bits_count(), 1);
+        assert_eq!(huff_code.code(), 0b00000001);
+
+        huff_code.push_bit(false);
+        assert_eq!(huff_code.bits_count(), 2);
+        assert_eq!(huff_code.code(), 0b00000010);
+
+        huff_code.push_bit(true);
+        assert_eq!(huff_code.bits_count(), 3);
+        assert_eq!(huff_code.code(), 0b00000101);
+
+        huff_code.push_bit(true);
+        assert_eq!(huff_code.bits_count(), 4);
+        assert_eq!(huff_code.code(), 0b00001011);
+
+        huff_code.push_bit(false);
+        assert_eq!(huff_code.bits_count(), 5);
+        assert_eq!(huff_code.code(), 0b00010110);
+
+        huff_code.push_bit(true);
+        assert_eq!(huff_code.bits_count(), 6);
+        assert_eq!(huff_code.code(), 0b00101101);
+
+        huff_code.push_bit(true);
+        assert_eq!(huff_code.bits_count(), 7);
+        assert_eq!(huff_code.code(), 0b01011011);
+
+        huff_code.push_bit(false);
+        assert_eq!(huff_code.bits_count(), 8);
+        assert_eq!(huff_code.code(), 0b10110110);
+
+        //now, in reverse order
+
+        assert_eq!(huff_code.pop_bit(), false);
+        assert_eq!(huff_code.bits_count(), 7);
+        assert_eq!(huff_code.code(), 0b01011011);
+
+        assert_eq!(huff_code.pop_bit(), true);
+        assert_eq!(huff_code.bits_count(), 6);
+        assert_eq!(huff_code.code(), 0b00101101);
+
+        assert_eq!(huff_code.pop_bit(), true);
+        assert_eq!(huff_code.bits_count(), 5);
+        assert_eq!(huff_code.code(), 0b00010110);
+
+        assert_eq!(huff_code.pop_bit(), false);
+        assert_eq!(huff_code.bits_count(), 4);
+        assert_eq!(huff_code.code(), 0b00001011);
+
+        assert_eq!(huff_code.pop_bit(), true);
+        assert_eq!(huff_code.bits_count(), 3);
+        assert_eq!(huff_code.code(), 0b00000101);
+
+        assert_eq!(huff_code.pop_bit(), true);
+        assert_eq!(huff_code.bits_count(), 2);
+        assert_eq!(huff_code.code(), 0b00000010);
+
+        assert_eq!(huff_code.pop_bit(), false);
+        assert_eq!(huff_code.bits_count(), 1);
+        assert_eq!(huff_code.code(), 0b00000001);
+
+        assert_eq!(huff_code.pop_bit(), true);
+        assert_eq!(huff_code.bits_count(), 0);
+        assert_eq!(huff_code.code(), 0b00000000);
+    }
 }
