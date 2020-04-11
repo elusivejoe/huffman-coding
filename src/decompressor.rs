@@ -1,4 +1,4 @@
-use crate::{binops, huffman};
+use crate::{bin_operations, huffman};
 
 pub fn decompress(
     compressed_stream: &(Vec<u8>, usize),
@@ -11,7 +11,7 @@ pub fn decompress(
     let mut current_node = huffman_tree_root;
 
     for index in 0..compr_data_bin_len {
-        if binops::check_bit_set(compr_data, index).expect("Wrong bit num") {
+        if bin_operations::check_bit_set(compr_data, index).expect("Wrong bit num") {
             if let Some(right_node) = &current_node.right {
                 current_node = right_node;
             }

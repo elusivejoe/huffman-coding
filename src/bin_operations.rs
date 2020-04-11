@@ -1,13 +1,3 @@
-pub fn is_bit_set(byte: u8, bit_num: u8) -> Option<bool> {
-    if bit_num >= 8 {
-        return None;
-    }
-
-    let mask = 0b10000000 >> bit_num;
-
-    Some(byte & mask > 0)
-}
-
 pub fn check_bit_set(stream: &[u8], bit_num: usize) -> Option<bool> {
     if bit_num >= stream.len() * 8 {
         return None;
@@ -19,9 +9,19 @@ pub fn check_bit_set(stream: &[u8], bit_num: usize) -> Option<bool> {
     is_bit_set(stream[byte_idx], relative_bit_idx as u8)
 }
 
+fn is_bit_set(byte: u8, bit_num: u8) -> Option<bool> {
+    if bit_num >= 8 {
+        return None;
+    }
+
+    let mask = 0b10000000 >> bit_num;
+
+    Some(byte & mask > 0)
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::binops::{check_bit_set, is_bit_set};
+    use crate::bin_operations::{check_bit_set, is_bit_set};
 
     #[test]
     fn test_bit_set() {

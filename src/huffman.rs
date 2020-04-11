@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-#[derive(Eq)]
+#[derive(Eq, Debug)]
 pub struct Node {
     pub frequency: u64,
     pub byte: Option<u8>,

@@ -3,14 +3,15 @@ use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
 
-mod binops;
+mod bin_operations;
 mod compressor;
 mod decompressor;
 mod huffman;
-mod utils;
+mod run_config;
+mod stream_helpers;
 
 fn main() -> std::io::Result<()> {
-    let args = utils::parse_args(&env::args().collect())?;
+    let args = run_config::Config::new(env::args())?;
 
     println!(
         "Mode: {}\nInput: {}\nOutput{}\n",
@@ -25,11 +26,11 @@ fn main() -> std::io::Result<()> {
 
     if let Some(root_node) = huffman_tree {
         let codes = compressor::calc_codes(&root_node);
-        let stream_len = utils::stream_length(&mut reader)?;
+        let stream_len = stream_helpers::stream_length(&mut reader)?;
 
         reader.seek(SeekFrom::Start(0))?;
 
-        while utils::stream_current_position(&mut reader)? != stream_len {
+        while stream_helpers::stream_current_position(&mut reader)? != stream_len {
             let chunk_size = std::cmp::min(stream_len, 1024);
 
             let mut chunk = vec![0u8; chunk_size as usize];
